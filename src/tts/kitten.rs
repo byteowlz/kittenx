@@ -176,9 +176,25 @@ impl KittenTTS {
         // Convert output to Vec<f32>
         let audio_data: Vec<f32> = output.iter().cloned().collect();
         
-        // Trim audio exactly like Python: audio = outputs[0][5000:-10000]
-        let start_trim = 5000.min(audio_data.len());
-        let end_trim = 10000.min(audio_data.len());
+        // Adaptive trimming based on audio length
+        // For shorter audio, use less aggressive trimming to avoid cutting off words
+        let audio_duration_seconds = audio_data.len() as f32 / self.sample_rate as f32;
+        
+        let (start_trim, end_trim) = if audio_duration_seconds < 2.0 {
+            // For short audio (< 2 seconds), use minimal trimming
+            let start = (self.sample_rate as f32 * 0.1) as usize; // 0.1 seconds
+            let end = (self.sample_rate as f32 * 0.2) as usize;   // 0.2 seconds
+            (start.min(audio_data.len() / 4), end.min(audio_data.len() / 4))
+        } else if audio_duration_seconds < 5.0 {
+            // For medium audio (2-5 seconds), use moderate trimming
+            let start = (self.sample_rate as f32 * 0.15) as usize; // 0.15 seconds
+            let end = (self.sample_rate as f32 * 0.3) as usize;    // 0.3 seconds
+            (start.min(audio_data.len() / 3), end.min(audio_data.len() / 3))
+        } else {
+            // For longer audio, use the original Python trimming values
+            (5000.min(audio_data.len() / 2), 10000.min(audio_data.len() / 2))
+        };
+        
         let trimmed = if audio_data.len() > start_trim + end_trim {
             audio_data[start_trim..audio_data.len() - end_trim].to_vec()
         } else if audio_data.len() > start_trim {

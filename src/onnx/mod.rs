@@ -43,12 +43,13 @@ impl KittenOnnx {
         Ok(instance)
     }
 
+    #[allow(dead_code)]
     fn load_model(&mut self, model_path: &str) -> Result<()> {
         self.load_model_with_provider(model_path, AccelerationProvider::Cpu)
     }
 
     fn load_model_with_provider(&mut self, model_path: &str, provider: AccelerationProvider) -> Result<()> {
-        let mut builder = SessionBuilder::new()?;
+        let builder = SessionBuilder::new()?;
 
         // Configure execution providers based on the selected provider
         let builder = match provider {

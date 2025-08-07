@@ -92,15 +92,27 @@ impl KittenTTS {
         ];
 
         for voice_name in &voice_names {
-            match npz.by_name::<ndarray::OwnedRepr<f32>, ndarray::Ix1>(voice_name) {
-                Ok(voice_array) => {
-                    voices.insert(voice_name.to_string(), voice_array);
-                    println!("Loaded voice: {}", voice_name);
+            // First try loading as 2D array (which is the actual format in the NPZ file)
+            match npz.by_name::<ndarray::OwnedRepr<f32>, ndarray::Ix2>(voice_name) {
+                Ok(voice_array_2d) => {
+                    let len = voice_array_2d.len();
+                    let voice_array_1d = voice_array_2d.to_shape((len,))?.to_owned();
+                    println!("Loaded voice: {} with shape {:?}", voice_name, voice_array_1d.shape());
+                    voices.insert(voice_name.to_string(), voice_array_1d);
                 }
                 Err(_) => {
-                    println!("Warning: Voice {} not found in NPZ file, using dummy", voice_name);
-                    // Create a dummy voice embedding as fallback
-                    voices.insert(voice_name.to_string(), Array1::zeros(256));
+                    // Fallback: try loading as 1D array
+                    match npz.by_name::<ndarray::OwnedRepr<f32>, ndarray::Ix1>(voice_name) {
+                        Ok(voice_array) => {
+                            println!("Loaded voice: {} with shape {:?}", voice_name, voice_array.shape());
+                            voices.insert(voice_name.to_string(), voice_array);
+                        }
+                        Err(_) => {
+                            println!("Warning: Voice {} not found in NPZ file, using dummy", voice_name);
+                            // Create a dummy voice embedding as fallback
+                            voices.insert(voice_name.to_string(), Array1::zeros(256));
+                        }
+                    }
                 }
             }
         }
@@ -164,11 +176,13 @@ impl KittenTTS {
         // Convert output to Vec<f32>
         let audio_data: Vec<f32> = output.iter().cloned().collect();
         
-        // Trim audio (similar to Python implementation)
+        // Trim audio (matching Python implementation: audio = outputs[0][5000:-10000])
         let start_trim = 5000.min(audio_data.len());
-        let end_trim = 10000.min(audio_data.len().saturating_sub(start_trim));
+        let end_trim = 10000.min(audio_data.len());
         let trimmed = if audio_data.len() > start_trim + end_trim {
             audio_data[start_trim..audio_data.len() - end_trim].to_vec()
+        } else if audio_data.len() > start_trim {
+            audio_data[start_trim..].to_vec()
         } else {
             audio_data
         };

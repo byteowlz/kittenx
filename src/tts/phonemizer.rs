@@ -24,24 +24,32 @@ pub fn detect_language(text: &str) -> Option<String> {
 }
 
 pub fn text_to_phonemes_simple(text: &str, language: &str) -> Result<String> {
-    // Simple tokenization for basic phonemization
-    let tokens = basic_tokenize(text);
-    let phonemes_str = tokens.join(" ");
-    
-    // Use espeak for phonemization if available, otherwise fallback to simple processing
-    match text_to_phonemes(text, language, None, true, false) {
-        Ok(phonemes) => Ok(phonemes.join("")),
+    // Use espeak for phonemization with preserve_punctuation=true and with_stress=true
+    // to match the Python implementation
+    match text_to_phonemes(text, language, None, true, true) {
+        Ok(phonemes) => {
+            let phonemes_str = phonemes.join("");
+            // Apply the same tokenization as Python's basic_english_tokenize
+            let tokens = basic_english_tokenize(&phonemes_str);
+            Ok(tokens.join(" "))
+        },
         Err(_) => {
-            // Fallback: simple character-based processing
-            Ok(phonemes_str)
+            // Fallback: use basic tokenization on original text
+            let tokens = basic_english_tokenize(text);
+            Ok(tokens.join(" "))
         }
     }
 }
 
-pub fn basic_tokenize(text: &str) -> Vec<String> {
+pub fn basic_english_tokenize(text: &str) -> Vec<String> {
     use regex::Regex;
+    // Match Python's basic_english_tokenize: r"\w+|[^\w\s]"
     let re = Regex::new(r"\w+|[^\w\s]").unwrap();
     re.find_iter(text)
         .map(|m| m.as_str().to_string())
         .collect()
+}
+
+pub fn basic_tokenize(text: &str) -> Vec<String> {
+    basic_english_tokenize(text)
 }

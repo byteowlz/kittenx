@@ -137,23 +137,23 @@ impl KittenTTS {
             anyhow::bail!("Voice '{}' not available. Available voices: {:?}", voice, self.available_voices);
         }
 
-        // Detect language and phonemize
-        let language = phonemizer::detect_language(text).unwrap_or_else(|| "en-us".to_string());
-        println!("Detected language: {}", language);
+        // Use English as default language (matching Python implementation)
+        let language = "en-us";
+        println!("Using language: {}", language);
 
-        // Convert text to phonemes
-        let phonemes = phonemizer::text_to_phonemes_simple(text, &language)
+        // Convert text to phonemes using espeak backend with preserve_punctuation=True, with_stress=True
+        let phonemes = phonemizer::text_to_phonemes_simple(text, language)
             .unwrap_or_else(|_| {
                 // Fallback to basic tokenization
-                phonemizer::basic_tokenize(text).join(" ")
+                phonemizer::basic_english_tokenize(text).join(" ")
             });
 
         println!("Phonemes: {}", phonemes);
 
-        // Convert phonemes to tokens
+        // Convert phonemes to tokens (matching Python's approach)
         let mut tokens = self.text_cleaner.clean(&phonemes);
         
-        // Add start and end tokens
+        // Add start and end tokens (matching Python: tokens.insert(0, 0); tokens.append(0))
         tokens.insert(0, 0);
         tokens.push(0);
 
@@ -176,7 +176,7 @@ impl KittenTTS {
         // Convert output to Vec<f32>
         let audio_data: Vec<f32> = output.iter().cloned().collect();
         
-        // Trim audio (matching Python implementation: audio = outputs[0][5000:-10000])
+        // Trim audio exactly like Python: audio = outputs[0][5000:-10000]
         let start_trim = 5000.min(audio_data.len());
         let end_trim = 10000.min(audio_data.len());
         let trimmed = if audio_data.len() > start_trim + end_trim {

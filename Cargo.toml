@@ -2,9 +2,20 @@
 name = "kittenx"
 version = "0.2.0"
 edition = "2021"
-description = "A pure Rust CLI for KittenTTS text-to-speech synthesis - GPU accelerated"
+description = "A pure Rust TTS library and CLI for KittenTTS text-to-speech synthesis - GPU accelerated"
 authors = ["KittenML", "Tommy Falkowski"]
 license = "GPL-3.0-or-later"
+repository = "https://github.com/byteowlz/kittenx"
+keywords = ["tts", "text-to-speech", "speech-synthesis", "rust", "gpu"]
+categories = ["multimedia::audio", "api-bindings"]
+
+[[bin]]
+name = "kittenx"
+path = "src/main.rs"
+
+[lib]
+name = "kittenx"
+path = "src/lib.rs"
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
